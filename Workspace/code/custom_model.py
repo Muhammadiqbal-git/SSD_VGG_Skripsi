@@ -16,6 +16,14 @@ class AnchorGenerator(layers.Layer):
         self.num_anchor = len(self.aspect_ratio)
     
     def call(self, inputs):
+        """ AnchorGenerator call
+
+        Args:
+            inputs (Tensor): tensor
+
+        Returns:
+            list : return a list or tensor
+        """
         batch_size = tf.shape(inputs)[0]
         img_h = inputs.shape[1]
         img_w = inputs.shape[2]     
@@ -51,8 +59,8 @@ class CustomModel(Model):
             self.input_layer = None
         # TODO CALL PREPROCESSING FOR VGG
         vgg = VGG16(include_top=False, input_shape=input_shape)
-        self.vggs = Model(inputs=vgg.input, outputs=vgg.get_layer("block5_conv3").output)
-        self.vgg3 = Model(inputs=vgg.input, outputs=vgg.get_layer("block4_conv3").output)
+        self.vggs = Model(inputs=vgg.input, outputs=vgg.get_layer("block5_conv3").output) # type: ignore
+        self.vgg3 = Model(inputs=vgg.input, outputs=vgg.get_layer("block4_conv3").output) # type: ignore
         
 
         self.conv6_1 = Conv2D(1024, (3, 3), padding="same", name="block6_conv1")
@@ -97,22 +105,39 @@ class CustomModel(Model):
         height = (box_h*img_size/2)
         cx = (x * img_size)
         cy = (y * img_size)
-        return int(cx-width), int(cx+width), int(cy-height), int(cy+height)
+        return (cx-width), (cx+width), (cy-height), (cy+height)
     
-    def anchor2array(self, anchors, img_size):
+    def anchor2array(self, inputs_anchors, img_size):
         """_summary_
 
         Args:
-            anchors (List): [batch, box, [x, y, box_w, box_h, scale]]
+            anchors (List): [batch, num_anchors, [x, y, box_w, box_h, scale]]
             img_size (_type_): _description_
         """
-        arr = tf.zeros((len(anchors), 4))
-        
-        for i in range(len(anchors)):
-            anchor = anchors[i]
-            xmin, xmax, ymin, ymax = self.prop2abs(x=anchor[0], y=anchor[1], box_w=anchor[2], box_h=anchor[3], img_size=img_size)
-            arr = tf.tensor_scatter_nd_update(arr, [[i]], [[xmin, xmax, ymin, ymax]])
+        arr = tf.zeros((tf.shape(inputs_anchors)[0], tf.shape(inputs_anchors)[1], 4))
+        for i in range(tf.shape(inputs_anchors)[0]):
+            for j in range(tf.shape(inputs_anchors)[1]):
+                anchor = inputs_anchors[i, j]
+                xmin, xmax, ymin, ymax = self.prop2abs(x=anchor[0], y=anchor[1], box_w=anchor[2], box_h=anchor[3], img_size=img_size)
+                arr = tf.tensor_scatter_nd_update(arr, [[i, j]], [[xmin, xmax, ymin, ymax]])
         return arr
+    
+    def box2array(self, label, img_size):
+        box = label[:, 1] * img_size
+        xmin, xmax, ymin, ymax = box[0], box[2], box[1], box[3]
+        arr = tf.convert_to_tensor([xmin, xmax, ymin, ymax])
+        return arr
+    
+    def compute_iou(self, anchor_arr, box_arr):
+        for box in box_arr:
+            xmin = tf.math.maximum(box_arr[0], anchor_arr[:, 0])
+            xmax = tf.math.minimum(box_arr[1], anchor_arr[:, 1])
+            ymin = tf.math.maximum(box_arr[2], anchor_arr[:, 2])
+            ymax = tf.math.minimum(box_arr[3], anchor_arr[:, 3])
+            
+            area_anch = (anchor_arr[:,1] - anchor_arr[:, 0]+1) * (anchor_arr[:, 3] - anchor_arr[:, 2]+1)
+            area_box = (box_arr[1] - box_arr[0]+1) * (box_arr[3] - box_arr[2]+1)
+            
         
     def train_step(self, batch, **kwargs):
         X, y = batch
@@ -165,6 +190,7 @@ class CustomModel(Model):
         conv11_2_output = self.conv11_2(conv11_1_output)
 
         cl4_3_output = self.anchor_gen4_3(vgg_3)
+        assert cl4_3_output is not None
         print(cl4_3_output.shape)
         # cl4_3_output = Reshape((-1, 1))(cl4_3_output)
         # cl4_3_output = Activation("sigmoid")(cl4_3_output)
@@ -172,6 +198,7 @@ class CustomModel(Model):
         rl4_3_output = self.rl4_3(vgg_3)
         rl4_3_output = Reshape((-1, 4))(rl4_3_output)
         rl4_3_output = Activation("sigmoid")(rl4_3_output)
+        assert rl4_3_output is not None
 
         cl7_1_output = self.cl7_1(conv7_1_output)
         cl7_1_output = Reshape((-1, 1))(cl7_1_output)
@@ -184,8 +211,8 @@ class CustomModel(Model):
         # c_layer = self.concat([cl4_3_output, cl7_1_output])
         r_layer = self.concat([rl4_3_output, rl7_1_output])
         print('-==========-')
-        anch = tf.fill([40, 5], 2.0)
-        test = self.anchor2array(anchors=anch, img_size=input_tensor.shape[1])
+        anch = tf.fill([8, 40, 5], 2.0)
+        test = self.anchor2array(inputs_anchors=anch, img_size=input_tensor.shape[1])
         print(test)
         # # print(cl4_3_output.shape)
         # print(cl7_1_output.shape)

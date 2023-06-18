@@ -40,7 +40,9 @@ class DataLoad:
     def preview_data(self, data: tf.data.Dataset):
         review = data.as_numpy_iterator().next()
         fig, ax = plt.subplots(ncols=4, figsize=(20, 20))
+        print('=s=s=s=s=')
         print(review[1])
+        print(review[1][1][0][0])
         # print(review[0][1])
         # print(review[1][1][1])
 
