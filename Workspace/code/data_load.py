@@ -30,7 +30,7 @@ class DataLoad:
 
     def set_tf_data(self, img_data, label_data,  batch=8, prefetch=0, shuffle=-1,):
         if shuffle == -1:
-            shuffle = len(img_data)
+            shuffle = tf.data.Dataset.cardinality(img_data)
         dataset = tf.data.Dataset.zip((img_data, label_data))
         dataset = dataset.shuffle(shuffle)
         dataset = dataset.batch(batch)
@@ -78,7 +78,7 @@ class DataLoad:
         train = self.set_tf_data(train_img, train_label, 8, 4)
         test = self.set_tf_data(test_img, test_label, 8, 4)
         print('train')
-        print(len(train))
+        print(tf.data.Dataset.cardinality(train))
         return train, test
         
         

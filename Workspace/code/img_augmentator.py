@@ -8,10 +8,13 @@ from tqdm import tqdm
 
 
 class ImgAugmentator:
+    """
+    [xmin, ymin, xmax, ymax]
+    """
     def img_augment(self, dir):
         augmentator = alb.Compose(
             [
-                alb.RandomCrop(height=450, width=450),
+                alb.RandomCrop(height=300, width=300),
                 alb.HorizontalFlip(p=0.5),
                 alb.RandomBrightnessContrast(p=0.2),
                 alb.RandomGamma(p=0.2),

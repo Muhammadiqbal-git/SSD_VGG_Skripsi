@@ -62,7 +62,8 @@ class ModelSkripsi:
         return model
 
     def optimizer(self, len_data, lr=0.0001, opt_type="adam"):
-        lr_decay = (1.0 / 0.75 - 1) / len_data
+        print(len_data)
+        # lr_decay = (1.0 / 0.75 - 1) / len_data
         opt = tf.keras.optimizers.Adam(learning_rate=lr)
         return opt
 
@@ -79,6 +80,19 @@ class ModelSkripsi:
     def classification_loss(self):
         class_loss = tf.keras.losses.BinaryCrossentropy()
         return class_loss
+    
+    # @tf.function
+    # def make_a_prediction(self, data, model):
+    #     print(data)
+    #     steps = len(data)
+    #     data = iter(data)
+    #     xt, yt = data.next()
+    #     x, y = next(data)
+        
+    #     print(x.shape)
+    #     print(steps)
+    #     cls, coors = model.predict(x)
+    #     return cls, coors
 
 
 if __name__ == "__main__":
@@ -90,8 +104,9 @@ if __name__ == "__main__":
 
     train, test = _instance_data_load.load()
     # model = _instance_class.build_model()
-    
-    _instance_custom_model = custom_model.CustomModel(input_shape=(300, 300, 3))
+    X, y = train.as_numpy_iterator().next()
+    print('y =======', y[1].shape)
+    _instance_custom_model = custom_model.CustomModel((X, y), input_shape=(300, 300, 3))
     # _instance_custom_model.build((None, 120, 120, 3))
     input_tensor = tf.keras.Input(shape=(300, 300, 3))
     # model_output = _instance_custom_model.call(input_tensor=input_tensor)
@@ -101,20 +116,33 @@ if __name__ == "__main__":
 
     _instance_custom_model.summary()
     # models.summary()
+    assert _instance_custom_model is not None
+    assert train is not None
+    assert _instance_class is not None
     
-
-    X, y = train.as_numpy_iterator().next()
     # print(X.shape)
-    # clss, crs = model.predict(X)
-    classes, coors = _instance_custom_model.predict(X)
+    # classes, coors = _instance_custom_model.predict(X)
     # classes, coors = model.predict(X)
-    print(classes[0])
+    # print(coors[0])
     # print(classes.shape)
-    # print(coors)
     
-    optimizer = _instance_class.optimizer(len(train))
+    optimizer = _instance_class.optimizer(tf.data.Dataset.cardinality(train))
     local_loss = _instance_class.localization_loss
     class_loss = _instance_class.classification_loss()
+    
+    # _instance_custom_model.compile(optimizer, class_loss, local_loss, run_eagerly=True)
+    classes, coors = _instance_custom_model.predict(X)
+    # print(X)
+    # print(X.shape)
+    print('output=======================')
+    print(classes)
+    print(classes.shape)
+    print(coors)
+    print(coors.shape)
+    
+    # cls, coors = _instance_class.make_a_prediction(train, _instance_custom_model) # type: ignore
+    
+    
     # print(train)
     # print(len(train))
 
@@ -123,7 +151,6 @@ if __name__ == "__main__":
     # print(local_loss(y[1], coors))
     # print("==========")
     # print(class_loss(y[0], classes))
-    # _instance_custom_model.compile(optimizer, class_loss, local_loss)
     # logdir = "logs"
     # tensorboard_callback = TensorBoard(log_dir=logdir)
     # _instance_custom_model.compute_output_shape(input_shape=(None, 120, 120, 3))
