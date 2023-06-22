@@ -47,6 +47,10 @@ class AnchorGenerator(layers.Layer):
         anchor_boxes = tf.tile(anchor_boxes, (batch_size, 1, 1))
         anchor_boxes = tf.cast(anchor_boxes, dtype=tf.float32)
         return anchor_boxes
+    
+# class TestLayer(layers.Layer):
+    
+
 
 
 class CustomModel(Model):
@@ -103,6 +107,7 @@ class CustomModel(Model):
     #     self.lloss = localizationloss
     #     self.opt = opt
 
+    # @tf.function
     def prop2abs(self, x, y, box_w, box_h, img_size):
         width = (box_w*img_size/2)
         height = (box_h*img_size/2)
@@ -135,6 +140,7 @@ class CustomModel(Model):
     #     print('arr value after : ', arr)
     #     return arr
     
+    # @tf.function
     def anchor2array(self, inputs_anchors, img_size):
         batch_size = tf.shape(inputs_anchors)[0]
         if batch_size is None:
@@ -180,6 +186,7 @@ class CustomModel(Model):
         # return xmin
         return arr
     
+    # @tf.function
     def compute_iou(self, anchor_arr, box):
         box = tf.reshape(box, [-1, 1, 4])
         xmin = tf.math.maximum(box[:, :, 0], anchor_arr[:, :, 0])
@@ -196,6 +203,13 @@ class CustomModel(Model):
         union = area_box + area_anch - intersection
         
         return intersection / union
+    
+    # @tf.function
+    def pos_neg_boxes(self, iou_arr, threshold):
+        iou = iou_arr > threshold
+        # iou = tf.where(iou)
+        iou = tf.math.argmax(iou_arr, axis=1)
+        return iou
             
             
             
@@ -282,7 +296,8 @@ class CustomModel(Model):
         test_box = self.box2array(label=self.batch[1][1], img_size=input_tensor.shape[1])
         
         # assert test_box is not None
-        iou = self.compute_iou(test, test_box)
+        iou_arr = self.compute_iou(test, test_box)
+        iou = self.pos_neg_boxes(iou_arr, 0.12)
         print('aaaaa', iou)
         
         # # print(cl4_3_output.shape)
@@ -296,7 +311,7 @@ class CustomModel(Model):
         
         # model = Model(inputs=input_tensor, outputs=[c_layer, r_layer])
         # print(model.summary())
-        return [test_box, iou]
+        return [iou_arr, iou]
     
     # def summary_model(self):
     #     inputs = keras.Input(shape=(300, 300, 3))
