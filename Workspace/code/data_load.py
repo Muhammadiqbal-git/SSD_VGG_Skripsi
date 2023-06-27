@@ -18,14 +18,25 @@ class DataLoad:
         return data
 
     def load_labels(self, label_path):
-        with open(label_path.numpy(), "r", encoding="utf-8") as f:
+        with tf.io.gfile.GFile(name=label_path, mode="r") as f:
             label = json.load(f)
-            return [label["class"]], label["bbox"]
+            return label["class"], label["bbox"]
 
     def set_tf_label(self, dir):
+        # TODO SOMEHOW MAKE A TF DATASET THAT HAD BATCH SHAPE, AND CONTINUE THE SSD JOURNYE HAHAHA
         path = os.path.join(dir, "*.json")
-        labels = tf.data.Dataset.list_files(path, shuffle=False)
-        labels = labels.map(lambda x: tf.py_function(func=self.load_labels, inp=[x], Tout=[tf.uint8, tf.float32]))  # type: ignore
+        # labels = tf.data.Dataset.list_files(path, shuffle=False)
+        labels_c = []
+        labels_l = []
+        
+        for path in os.listdir(dir):
+            if path.endswith(".json"):
+                label_class, label_loc = self.load_labels(os.path.join(dir, path))
+                labels_c.append(label_class)
+                labels_l.append(label_loc)
+        labels_c = tf.convert_to_tensor(labels_c, dtype=tf.uint8)
+        labels_l = tf.convert_to_tensor(labels_l, dtype=tf.float32)
+        labels = tf.data.Dataset.from_tensor_slices((labels_c, labels_l))
         return labels
 
     def set_tf_data(self, img_data, label_data,  batch=8, prefetch=0, shuffle=-1,):
@@ -46,7 +57,7 @@ class DataLoad:
         # print(review[0][1])
         # print(review[1][1][1])
 
-        for idx in range(4):
+        for idx in range(3):
             sample_image = review[0][idx]
             sample_coors = review[1][1][idx]
             cv2.rectangle(
@@ -78,7 +89,12 @@ class DataLoad:
         train = self.set_tf_data(train_img, train_label, 8, 4)
         test = self.set_tf_data(test_img, test_label, 8, 4)
         print('train')
-        print(tf.data.Dataset.cardinality(train))
+        tes = train.take(1)
+        # print(train.get_single_element()[0])
+        lis = list(tes)
+        print(tes.element_spec[1][1].shape)
+        print(lis[0][1])
+        
         return train, test
         
         

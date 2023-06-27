@@ -81,6 +81,8 @@ class ModelSkripsi:
         class_loss = tf.keras.losses.BinaryCrossentropy()
         return class_loss
     
+    # def smooth_l1_losses()
+    
     # @tf.function
     # def make_a_prediction(self, data, model):
     #     print(data)
@@ -103,15 +105,15 @@ if __name__ == "__main__":
     _instance_img_load._limit_gpu()
 
     train, test = _instance_data_load.load()
+    print(train)
     # model = _instance_class.build_model()
     X, y = train.as_numpy_iterator().next()
-    print('y =======', y[1].shape)
+    # train_take = tr
     _instance_custom_model = custom_model.CustomModel((X, y), input_shape=(300, 300, 3))
     # _instance_custom_model.build((None, 120, 120, 3))
     input_tensor = tf.keras.Input(shape=(300, 300, 3))
     # model_output = _instance_custom_model.call(input_tensor=input_tensor)
     # models = Model(inputs=input_tensor, outputs=model_output)
-    print('sebelum')
     _instance_custom_model(input_tensor)
 
     _instance_custom_model.summary()
@@ -131,7 +133,7 @@ if __name__ == "__main__":
     class_loss = _instance_class.classification_loss()
     
     # _instance_custom_model.compile(optimizer, class_loss, local_loss, run_eagerly=True)
-    classes, coors = _instance_custom_model.predict(X)
+    classes, coors = _instance_custom_model.predict(X, y)
     # print(X)
     # print(X.shape)
     print('output=======================')
