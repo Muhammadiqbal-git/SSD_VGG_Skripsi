@@ -53,9 +53,9 @@ class ImgAugmentator:
                             )
                         )
                         try:
-                            for x in range(10):
+                            for x in range(2):
                                 augmented = augmentator(
-                                    image=img, bboxes=[coor], class_labels=["Human"]
+                                    image=img, bboxes=[coor], class_labels=['Detection']
                                 )
                                 annotation = {}
                                 aug_path = os.path.join(
@@ -68,12 +68,17 @@ class ImgAugmentator:
                                     if len(augmented["bboxes"]) == 0:
                                         annotation["bbox"] = [0, 0, 0, 0]
                                         annotation["class"] = 0
+                                        annotation["objectness"] = label["objectness"]
                                     else:
                                         annotation["bbox"] = augmented["bboxes"][0]
                                         annotation["class"] = 1
+                                        annotation["objectness"] = label["objectness"]
+                                        
                                 else:
                                     annotation["bbox"] = [0, 0, 0, 0]
                                     annotation["class"] = 0
+                                    annotation["objectness"] = label["objectness"]
+                                    
 
                                 with open(aug_path.replace('.jpg', '.json'), "w") as f:
                                     json.dump(annotation, f)

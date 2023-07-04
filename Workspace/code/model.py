@@ -8,7 +8,6 @@ import custom_model
 import img_load
 import numpy
 
-
 class ModelSkripsi:
     def build_model(self):
         vgg = VGG16(include_top=False, input_shape=(300, 300, 3))
@@ -81,7 +80,9 @@ class ModelSkripsi:
         class_loss = tf.keras.losses.BinaryCrossentropy()
         return class_loss
     
-    # def smooth_l1_losses()
+    def smooth_l1_losses(self):
+        loc_loss = tf.keras.losses.Huber()
+        return loc_loss
     
     # @tf.function
     # def make_a_prediction(self, data, model):
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     # model = _instance_class.build_model()
     X, y = train.as_numpy_iterator().next()
     # train_take = tr
-    _instance_custom_model = custom_model.CustomModel((X, y), input_shape=(300, 300, 3))
+    _instance_custom_model = custom_model.CustomModel(input_shape=(300, 300, 3))
     # _instance_custom_model.build((None, 120, 120, 3))
     input_tensor = tf.keras.Input(shape=(300, 300, 3))
     # model_output = _instance_custom_model.call(input_tensor=input_tensor)
@@ -123,24 +124,22 @@ if __name__ == "__main__":
     assert _instance_class is not None
     
     # print(X.shape)
-    # classes, coors = _instance_custom_model.predict(X)
+    # classes, coors = _instance_custom_model.predict(X, y)
     # classes, coors = model.predict(X)
     # print(coors[0])
     # print(classes.shape)
     
     optimizer = _instance_class.optimizer(tf.data.Dataset.cardinality(train))
-    local_loss = _instance_class.localization_loss
+    local_loss = _instance_class.smooth_l1_losses()
     class_loss = _instance_class.classification_loss()
     
-    # _instance_custom_model.compile(optimizer, class_loss, local_loss, run_eagerly=True)
-    classes, coors = _instance_custom_model.predict(X, y)
-    # print(X)
-    # print(X.shape)
-    print('output=======================')
-    print(classes)
-    print(classes.shape)
-    print(coors)
-    print(coors.shape)
+    _instance_custom_model.compile(optimizer, class_loss, local_loss, run_eagerly=True)
+    # classes, coors = _instance_custom_model.predict(X, y)
+    # print('output=======================')
+    # print(classes)
+    # print(classes.shape)
+    # print(coors)
+    # print(coors.shape)
     
     # cls, coors = _instance_class.make_a_prediction(train, _instance_custom_model) # type: ignore
     
@@ -153,9 +152,15 @@ if __name__ == "__main__":
     # print(local_loss(y[1], coors))
     # print("==========")
     # print(class_loss(y[0], classes))
-    # logdir = "logs"
-    # tensorboard_callback = TensorBoard(log_dir=logdir)
-    # _instance_custom_model.compute_output_shape(input_shape=(None, 120, 120, 3))
-    # _instance_custom_model.fit(train, epochs=5, callbacks=[tensorboard_callback])
+    logdir = "logs"
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
+    # _instance_custom_model.compute_output_shape(input_shape=(None, 300, 300, 3))
+    _instance_custom_model.fit(train, epochs=5, callbacks=[tensorboard_callback])
+    classes, coors = _instance_custom_model.predict(X, y)
+    print('output=======================')
+    print(classes)
+    print(classes.shape)
+    print(coors)
+    print(coors.shape)
     # _instance_custom_model.save("model", save_format="tf")
     # # print(hist.history)

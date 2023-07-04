@@ -20,12 +20,19 @@ class ImgFileNaming:
                         dir, "bg_" + file.replace(".json", ".jpg")
                     )
                     data["imagePath"] = "bg_" + file.replace(".json", ".jpg")
+                    data["objectness"] = 0
                     f.seek(0)
                     f.truncate()
                     json.dump(data, f)
                     f.close()
                     os.rename(label_path, new_label_path)
                     os.rename(img_path, new_img_path)
+                else:
+                    data["objectness"] = 1
+                    f.seek(0)
+                    f.truncate()
+                    json.dump(data, f)
+                    f.close()
 
     def _split_data(self, dir, split_size=0.8):
         img_list = [f for f in os.listdir(dir) if f.endswith(".jpg")]

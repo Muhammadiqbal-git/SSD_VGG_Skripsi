@@ -20,23 +20,27 @@ class DataLoad:
     def load_labels(self, label_path):
         with tf.io.gfile.GFile(name=label_path, mode="r") as f:
             label = json.load(f)
-            return label["class"], label["bbox"]
+            return float(label["class"]), label["bbox"], float(label["objectness"])
 
     def set_tf_label(self, dir):
-        # TODO SOMEHOW MAKE A TF DATASET THAT HAD BATCH SHAPE, AND CONTINUE THE SSD JOURNYE HAHAHA
+        """Make a list of labels
+
+        Args:
+            dir (string): directory of file label
+
+        Returns:
+            list: list of label [objectness, xmin, ymin, xmax, ymax, *class]
+        """
         path = os.path.join(dir, "*.json")
-        # labels = tf.data.Dataset.list_files(path, shuffle=False)
-        labels_c = []
-        labels_l = []
+        labels = []
         
         for path in os.listdir(dir):
             if path.endswith(".json"):
-                label_class, label_loc = self.load_labels(os.path.join(dir, path))
-                labels_c.append(label_class)
-                labels_l.append(label_loc)
-        labels_c = tf.convert_to_tensor(labels_c, dtype=tf.uint8)
-        labels_l = tf.convert_to_tensor(labels_l, dtype=tf.float32)
-        labels = tf.data.Dataset.from_tensor_slices((labels_c, labels_l))
+                label_class, label_loc, label_obj_nes = self.load_labels(os.path.join(dir, path))
+                # print(label_class, label_obj_nes, *label_loc)
+                labels.append([label_obj_nes, *label_loc, label_class])
+        labels= tf.convert_to_tensor(labels, dtype=tf.float32)
+        labels = tf.data.Dataset.from_tensor_slices((labels))
         return labels
 
     def set_tf_data(self, img_data, label_data,  batch=8, prefetch=0, shuffle=-1,):
@@ -52,19 +56,21 @@ class DataLoad:
         review = data.as_numpy_iterator().next()
         fig, ax = plt.subplots(ncols=4, figsize=(20, 20))
         print('=s=s=s=s=')
+        print(review)
         print(review[1])
-        print(review[1][1][0][0])
         # print(review[0][1])
         # print(review[1][1][1])
 
-        for idx in range(3):
+        for idx in range(4):
             sample_image = review[0][idx]
-            sample_coors = review[1][1][idx]
+            sample_coors = review[1][idx]
+            print(tuple(np.multiply(sample_coors[3:5], [300, 300]).astype(int)),)
             cv2.rectangle(
                 # (sample_image * 120).astype(np.uint8),
                 sample_image,
-                tuple(np.multiply(sample_coors[:2], [300, 300]).astype(int)),
-                tuple(np.multiply(sample_coors[2:], [300, 300]).astype(int)),
+                
+                tuple(np.multiply(sample_coors[1:3], [300, 300]).astype(int)),
+                tuple(np.multiply(sample_coors[3:5], [300, 300]).astype(int)),
                 (255, 0, 0),
                 1,
             )
@@ -92,8 +98,8 @@ class DataLoad:
         tes = train.take(1)
         # print(train.get_single_element()[0])
         lis = list(tes)
-        print(tes.element_spec[1][1].shape)
-        print(lis[0][1])
+        # print(tes.element_spec[1][1].shape)
+        # print(lis[0][1])
         
         return train, test
         
